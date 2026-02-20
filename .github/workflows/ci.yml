@@ -86,13 +86,26 @@ jobs:
         run: |
           ls native/target/release/os-theme-helper 2>/dev/null && echo "Helper already built by build.rs" || echo "Helper not found"
 
-      # ── Run tests (macOS only — integration test needs GUI) ──
-      - name: Run tests (macOS)
-        if: matrix.platform == 'darwin'
+      # ── Run Bun tests (all platforms) ──
+      # current.test.ts — verifies get_appearance returns valid value
+      # listener.test.ts — verifies on/off lifecycle
+      # dispose.test.ts — verifies cleanup
+      - name: Run tests (Unix)
+        if: runner.os != 'Windows'
         run: bun test test/current.test.ts test/listener.test.ts test/dispose.test.ts
 
+      - name: Run tests (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: bun test test/current.test.ts test/listener.test.ts test/dispose.test.ts
+
+      # ── Integration test (macOS only — requires osascript + GUI session) ──
+      - name: Run integration test (macOS)
+        if: matrix.platform == 'darwin'
+        run: bun test test/integration.test.ts
+
       # ── Verify Node.js addon loads ──
-      - name: Verify Node.js addon
+      - name: Verify Node.js addon (Unix)
         if: runner.os != 'Windows'
         run: |
           node -e "
