@@ -2,7 +2,8 @@ import { dlopen, FFIType, suffix, JSCallback } from "bun:ffi";
 import { join } from "path";
 import type { ThemeMode } from "./types";
 
-const NATIVE_LIB_NAME = `libos_theme.${suffix}`;
+const IS_WINDOWS = process.platform === "win32";
+const NATIVE_LIB_NAME = IS_WINDOWS ? `os_theme.${suffix}` : `libos_theme.${suffix}`;
 
 function findNativeLib(): string {
     // Look in native/target/release/ first (development)
