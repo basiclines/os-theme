@@ -2,14 +2,10 @@
 #import <AppKit/AppKit.h>
 #include <stdio.h>
 
-// This file is used in TWO ways:
-// 1. Linked into the dylib — provides macos_start/stop_theme_observer()
-// 2. Compiled as a standalone helper binary — runs on main thread, prints to stdout
+// Compiled as a standalone helper binary — runs on main thread, prints to stdout.
+// Exits automatically when parent process dies (stdin closes / PPID becomes 1).
 
 #ifdef HELPER_BINARY
-
-// --- Standalone helper mode ---
-// Runs on the main thread, prints "dark\n" or "light\n" to stdout on theme change
 
 @interface Observer : NSObject
 @end
@@ -24,8 +20,26 @@
 }
 @end
 
+static void watchParent(void) {
+    // Monitor stdin — when the parent process dies, our stdin pipe breaks.
+    // Also check PPID; if reparented to launchd (PID 1), parent is gone.
+    dispatch_source_t source = dispatch_source_create(
+        DISPATCH_SOURCE_TYPE_READ, STDIN_FILENO, 0,
+        dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0));
+
+    dispatch_source_set_event_handler(source, ^{
+        // stdin became readable (EOF) → parent died
+        _exit(0);
+    });
+    dispatch_source_set_cancel_handler(source, ^{
+        _exit(0);
+    });
+    dispatch_resume(source);
+}
+
 int main() {
     @autoreleasepool {
+        watchParent();
         NSApplicationLoad();
         Observer *obs = [[Observer alloc] init];
         [[NSDistributedNotificationCenter defaultCenter]
@@ -33,30 +47,11 @@ int main() {
                selector:@selector(themeChanged:)
                    name:@"AppleInterfaceThemeChangedNotification"
                  object:nil];
-        // Keep the main run loop alive
         NSRunLoop *rl = [NSRunLoop currentRunLoop];
         [rl addPort:[NSMachPort port] forMode:NSDefaultRunLoopMode];
         [rl run];
     }
     return 0;
-}
-
-#else
-
-// --- Library mode ---
-// Spawns the helper binary as a subprocess and reads from its stdout
-
-typedef void (*ThemeCallback)(int mode);
-
-static ThemeCallback g_callback = NULL;
-
-void macos_start_theme_observer(ThemeCallback callback) {
-    g_callback = callback;
-    // Actual subprocess spawning is done in Rust (macos.rs)
-}
-
-void macos_stop_theme_observer(void) {
-    g_callback = NULL;
 }
 
 #endif
