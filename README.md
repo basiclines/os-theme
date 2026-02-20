@@ -295,7 +295,7 @@ bun test test/integration.test.ts # just the live toggle test
 - [x] Event-driven macOS listener via `NSDistributedNotificationCenter` (helper subprocess)
 - [x] Node.js compatibility via N-API (`napi-rs` addon, works with tsx/ts-node)
 - [ ] Prebuilt binaries via npm optional dependencies (no Rust needed to install)
-- [ ] CI/CD with GitHub Actions matrix builds (macOS, Windows, Linux)
+- [x] CI/CD with GitHub Actions matrix builds (macOS, Windows, Linux)
 - [ ] `bun build --compile` for single-executable distribution
 
 ## License
