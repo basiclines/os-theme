@@ -65,9 +65,8 @@ pub fn start_listener() {
         }
     };
 
-    // Spawn the helper process (stdin piped so it detects parent death)
+    // Spawn the helper process
     let mut child = match Command::new(&helper)
-        .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()

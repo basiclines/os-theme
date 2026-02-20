@@ -1,6 +1,7 @@
 #import <Foundation/Foundation.h>
 #import <AppKit/AppKit.h>
 #include <stdio.h>
+#include <unistd.h>
 
 // Compiled as a standalone helper binary — runs on main thread, prints to stdout.
 // Exits automatically when parent process dies (stdin closes / PPID becomes 1).
@@ -20,21 +21,24 @@
 }
 @end
 
-static void watchParent(void) {
-    // Monitor stdin — when the parent process dies, our stdin pipe breaks.
-    // Also check PPID; if reparented to launchd (PID 1), parent is gone.
-    dispatch_source_t source = dispatch_source_create(
-        DISPATCH_SOURCE_TYPE_READ, STDIN_FILENO, 0,
-        dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0));
+#include <pthread.h>
 
-    dispatch_source_set_event_handler(source, ^{
-        // stdin became readable (EOF) → parent died
-        _exit(0);
-    });
-    dispatch_source_set_cancel_handler(source, ^{
-        _exit(0);
-    });
-    dispatch_resume(source);
+static void *parentWatchThread(void *arg) {
+    pid_t originalPPID = (pid_t)(intptr_t)arg;
+    while (1) {
+        sleep(1);
+        if (getppid() != originalPPID) {
+            _exit(0);
+        }
+    }
+    return NULL;
+}
+
+static void watchParent(void) {
+    pid_t ppid = getppid();
+    pthread_t thread;
+    pthread_create(&thread, NULL, parentWatchThread, (void *)(intptr_t)ppid);
+    pthread_detach(thread);
 }
 
 int main() {

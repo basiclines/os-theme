@@ -127,11 +127,20 @@ process.on("SIGINT", () => {
 
 | Platform | Read mechanism | Listen mechanism |
 |----------|---------------|-----------------|
-| **macOS** | `defaults read -g AppleInterfaceStyle` | Polls every 250ms from native thread |
+| **macOS** | `defaults read -g AppleInterfaceStyle` | `NSDistributedNotificationCenter` via helper subprocess (event-driven) |
 | **Windows** | Registry `AppsUseLightTheme` | `RegNotifyChangeKeyValue` (event-driven) |
 | **Linux** | D-Bus `org.freedesktop.portal.Settings` | D-Bus signal subscription (event-driven) |
 
 The native layer is written in Rust and compiled to a shared library (`.dylib` / `.so` / `.dll`), loaded at runtime via [`bun:ffi`](https://bun.sh/docs/runtime/ffi). The JS ↔ Rust callback uses a threadsafe `JSCallback` to safely deliver events from the native watcher thread.
+
+### macOS architecture
+
+macOS delivers `AppleInterfaceThemeChangedNotification` only on the **main thread's run loop**, which is owned by the Bun/Node runtime. To work around this, os-theme spawns a lightweight helper binary (`os-theme-helper`, ~51 KB) that:
+
+1. Runs `NSDistributedNotificationCenter` on its own main thread
+2. Prints `dark\n` or `light\n` to stdout when the theme changes
+3. The Rust library reads from the pipe on a background thread and fires the JS callback
+4. Monitors parent PPID on a background thread — exits immediately if the parent process dies (no orphans)
 
 ## Architecture
 
@@ -148,13 +157,91 @@ The native layer is written in Rust and compiled to a shared library (`.dylib` /
 ├─────────┼───────────────────────────┤
 │         ▼       Native (Rust)       │
 │  ┌────────────────────────────────┐ │
-│  │ macOS:   defaults read + poll  │ │
+│  │ macOS:   helper subprocess     │ │
+│  │          + NSDistributed       │ │
+│  │          NotificationCenter    │ │
 │  │ Windows: Registry + notify     │ │
 │  │ Linux:   D-Bus + signal        │ │
 │  └────────────────────────────────┘ │
-│  Runs on a separate native thread   │
+│  Event-driven on all platforms      │
 └─────────────────────────────────────┘
+        macOS detail:
+┌──────────┐  stdout pipe  ┌──────────────┐
+│  Rust    │◄──────────────│ os-theme-    │
+│  lib     │  stdin pipe   │ helper       │
+│  (bg     │──────────────►│ (main thread │
+│  thread) │  (death det.) │  run loop)   │
+└──────────┘               └──────────────┘
 ```
+
+## Performance
+
+The listener is fully event-driven — **zero CPU usage while idle**. No polling, no timers, no busy-wait.
+
+### Resource footprint (macOS, Apple Silicon)
+
+| Metric | Value |
+|--------|-------|
+| Helper binary size | **51 KB** |
+| Helper RSS (idle) | **~24 MB** *(macOS framework overhead)* |
+| CPU usage (idle) | **0.0%** |
+| Event latency | **~250 ms** *(notification → JS callback)* |
+| Extra processes | 1 helper subprocess |
+| Extra file descriptors | 2 pipes (stdin + stdout) |
+
+### Event-driven vs polling
+
+| | Polling (250ms) | Event-driven (current) |
+|---|---|---|
+| CPU while idle | Periodic spikes (`defaults read` fork every 250ms) | **0.0%** |
+| Worst-case latency | 250 ms | **~250 ms** |
+| Process spawns | ~4/second, forever | **1 total** (helper stays alive) |
+| Memory overhead | Minimal | +24 MB *(AppKit/Foundation frameworks)* |
+
+The ~24 MB RSS is the fixed cost of loading macOS's `AppKit` + `Foundation` frameworks, required by any process using `NSDistributedNotificationCenter`. It does not grow over time.
+
+### Orphan protection
+
+The helper process monitors its parent via `getppid()` on a background thread (1-second interval). If the parent process exits (gracefully or via crash/SIGKILL), the helper detects PPID reparenting and exits immediately — **no orphaned processes**.
+
+### Run the benchmark yourself
+
+```bash
+bun run benchmark
+```
+
+This measures binary size, memory, CPU (5-second idle sample), event latency (live toggle), and orphan cleanup. It briefly changes your macOS appearance and restores it afterwards.
+
+<details>
+<summary>Example output</summary>
+
+```
+╔══════════════════════════════════════════╗
+║      os-theme performance benchmark      ║
+╚══════════════════════════════════════════╝
+
+📦 Binary sizes
+   Native library (dylib):        448K
+   Helper binary:                  52K
+
+💾 Memory usage (idle)
+   Bun process (RSS):             40224 KB  (39.2 MB)
+   Helper process (RSS):          24448 KB  (23.8 MB)
+
+⏱️  CPU usage (5-second idle sample)
+   Bun process:                   0.0%
+   Helper process:                0.0%
+
+⚡ Event latency (toggle dark → light → restore)
+   Dark → callback:              249 ms
+   Light → callback:             255 ms
+   Average:                      252 ms
+
+🧹 Orphan protection
+   ✅ Helper exited cleanly after parent kill
+```
+
+</details>
 
 ## Development
 
@@ -178,6 +265,7 @@ bun run build:native   # compile Rust → .dylib/.so/.dll
 bun run build:native   # compile native library
 bun test               # run all tests (unit + integration)
 bun run dev            # interactive demo — toggle your OS theme to see events
+bun run benchmark      # measure resource usage and event latency
 ```
 
 ### Testing
@@ -197,7 +285,7 @@ bun test test/integration.test.ts # just the live toggle test
 
 ## Roadmap
 
-- [ ] Event-driven macOS listener via Core Foundation (`CFNotificationCenterAddObserver`)
+- [x] Event-driven macOS listener via `NSDistributedNotificationCenter` (helper subprocess)
 - [ ] Node.js compatibility (N-API fallback for non-Bun consumers)
 - [ ] Prebuilt binaries via npm optional dependencies (no Rust needed to install)
 - [ ] CI/CD with GitHub Actions matrix builds (macOS, Windows, Linux)

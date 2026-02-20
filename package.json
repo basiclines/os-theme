@@ -10,7 +10,8 @@
   "scripts": {
     "build:native": "./scripts/build-native.sh",
     "test": "bun test",
-    "dev": "bun run src/demo.ts"
+    "dev": "bun run src/demo.ts",
+    "benchmark": "./scripts/benchmark.sh"
   },
   "keywords": [
     "dark-mode",
