@@ -4,13 +4,11 @@ Cross-platform OS theme detection (dark/light mode) with change notifications fo
 
 ## Features
 
-- 🌗 Detect current OS theme (`dark` or `light`)
-- 📡 Get notified when the theme changes
-- 🖥️ Cross-platform — macOS, Windows, Linux
-- ⚡ Native Rust core with dual runtime support
-- 🟢 **Bun** — direct FFI via `bun:ffi` (zero overhead)
-- 🟢 **Node.js** — N-API addon via `napi-rs` (works with tsx, ts-node, etc.)
-- 🪶 Zero JS dependencies
+- Detect current OS theme (`dark` or `light`)
+- Get notified when the theme changes
+- Cross-platform — macOS, Windows, Linux
+- Bun and Node support
+- Zero JS dependencies
 
 ## Install
 

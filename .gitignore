@@ -46,3 +46,7 @@ napi/target/
 *.so
 *.dll
 *.node
+
+# Demo video renders
+demos/os-theme-videos/out/
+demos/os-theme-videos/node_modules/
