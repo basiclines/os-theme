@@ -90,6 +90,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     name: Publish to npm
+    permissions:
+      contents: write
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -99,6 +102,9 @@ jobs:
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
+
+      - name: Update npm for OIDC support
+        run: npm install -g npm@latest
 
       # Download all platform artifacts
       - uses: actions/download-artifact@v4
@@ -128,26 +134,18 @@ jobs:
       - name: Publish @os-theme/darwin-arm64
         working-directory: npm/darwin-arm64
         run: npm publish --access public --provenance || true
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @os-theme/linux-x64
         working-directory: npm/linux-x64
         run: npm publish --access public --provenance || true
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @os-theme/win32-x64
         working-directory: npm/win32-x64
         run: npm publish --access public --provenance || true
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # Publish main package
       - name: Publish os-theme
         run: npm publish --access public --provenance || true
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # Create GitHub Release
       - name: Create GitHub Release
