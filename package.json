@@ -1,0 +1,35 @@
+{
+  "name": "os-theme",
+  "version": "0.0.1",
+  "description": "Cross-platform OS theme detection (dark/light mode) with event-driven change notifications for Node.js and Bun",
+  "module": "src/index.ts",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "build:native": "./scripts/build-native.sh",
+    "test": "bun test",
+    "dev": "bun run src/demo.ts"
+  },
+  "keywords": [
+    "dark-mode",
+    "light-mode",
+    "theme",
+    "appearance",
+    "os",
+    "system",
+    "detect",
+    "macos",
+    "windows",
+    "linux",
+    "ffi",
+    "native"
+  ],
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
