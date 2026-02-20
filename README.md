@@ -7,7 +7,9 @@ Cross-platform OS theme detection (dark/light mode) with change notifications fo
 - 🌗 Detect current OS theme (`dark` or `light`)
 - 📡 Get notified when the theme changes
 - 🖥️ Cross-platform — macOS, Windows, Linux
-- ⚡ Native Rust core called via `bun:ffi`
+- ⚡ Native Rust core with dual runtime support
+- 🟢 **Bun** — direct FFI via `bun:ffi` (zero overhead)
+- 🟢 **Node.js** — N-API addon via `napi-rs` (works with tsx, ts-node, etc.)
 - 🪶 Zero JS dependencies
 
 ## Install
@@ -22,57 +24,57 @@ bun add os-theme
 import { appearance } from "os-theme";
 
 // Read current theme
-console.log(appearance.current()); // "dark" or "light"
+console.log(await appearance.current()); // "dark" or "light"
 
 // Listen for changes
-appearance.on("change", (mode) => {
+await appearance.on("change", (mode) => {
   console.log(`Theme changed to: ${mode}`);
 });
 
 // Remove a specific listener
-appearance.off("change", myListener);
+await appearance.off("change", myListener);
 
 // Stop all listeners and clean up native resources
-appearance.dispose();
+await appearance.dispose();
 ```
 
 ## API
 
-### `appearance.current(): ThemeMode`
+### `appearance.current(): Promise<ThemeMode>`
 
 Returns the current OS theme: `"dark"` or `"light"`.
 
 ```typescript
-const mode = appearance.current();
+const mode = await appearance.current();
 ```
 
-### `appearance.on(event, listener)`
+### `appearance.on(event, listener): Promise<void>`
 
 Subscribe to theme changes. The listener receives the new `ThemeMode` whenever the OS switches between dark and light mode.
 
 ```typescript
-appearance.on("change", (mode) => {
+await appearance.on("change", (mode) => {
   // mode is "dark" or "light"
 });
 ```
 
-### `appearance.off(event, listener)`
+### `appearance.off(event, listener): Promise<void>`
 
 Remove a previously registered listener. When no listeners remain, the native watcher is automatically stopped.
 
 ```typescript
 const listener = (mode: ThemeMode) => console.log(mode);
-appearance.on("change", listener);
+await appearance.on("change", listener);
 // later...
-appearance.off("change", listener);
+await appearance.off("change", listener);
 ```
 
-### `appearance.dispose()`
+### `appearance.dispose(): Promise<void>`
 
 Stop all listeners and release native resources. Safe to call multiple times. After disposing, `current()` still works (it's a stateless read), but no more change events will fire until `on()` is called again.
 
 ```typescript
-appearance.dispose();
+await appearance.dispose();
 ```
 
 ### Types
@@ -81,10 +83,10 @@ appearance.dispose();
 type ThemeMode = "dark" | "light";
 
 interface Appearance {
-  current(): ThemeMode;
-  on(event: "change", listener: (mode: ThemeMode) => void): void;
-  off(event: "change", listener: (mode: ThemeMode) => void): void;
-  dispose(): void;
+  current(): Promise<ThemeMode>;
+  on(event: "change", listener: (mode: ThemeMode) => void): Promise<void>;
+  off(event: "change", listener: (mode: ThemeMode) => void): Promise<void>;
+  dispose(): Promise<void>;
 }
 ```
 
@@ -97,11 +99,12 @@ import { appearance } from "os-theme";
 import { useState, useEffect } from "react";
 
 function useOsTheme() {
-  const [mode, setMode] = useState(appearance.current());
+  const [mode, setMode] = useState<"dark" | "light">("light");
 
   useEffect(() => {
+    appearance.current().then(setMode);
     appearance.on("change", setMode);
-    return () => appearance.off("change", setMode);
+    return () => { appearance.off("change", setMode); };
   }, []);
 
   return mode;
@@ -113,12 +116,12 @@ function useOsTheme() {
 ```typescript
 import { appearance } from "os-theme";
 
-appearance.on("change", (mode) => {
+await appearance.on("change", (mode) => {
   regenerateColorPalette(mode);
 });
 
-process.on("SIGINT", () => {
-  appearance.dispose();
+process.on("SIGINT", async () => {
+  await appearance.dispose();
   process.exit(0);
 });
 ```
@@ -131,7 +134,11 @@ process.on("SIGINT", () => {
 | **Windows** | Registry `AppsUseLightTheme` | `RegNotifyChangeKeyValue` (event-driven) |
 | **Linux** | D-Bus `org.freedesktop.portal.Settings` | D-Bus signal subscription (event-driven) |
 
-The native layer is written in Rust and compiled to a shared library (`.dylib` / `.so` / `.dll`), loaded at runtime via [`bun:ffi`](https://bun.sh/docs/runtime/ffi). The JS ↔ Rust callback uses a threadsafe `JSCallback` to safely deliver events from the native watcher thread.
+The native layer is written in Rust and compiled to **two targets**:
+- **Bun**: shared library (`.dylib` / `.so` / `.dll`) loaded via [`bun:ffi`](https://bun.sh/docs/runtime/ffi) with threadsafe `JSCallback`
+- **Node.js**: N-API addon (`.node`) built with [`napi-rs`](https://napi.rs) using `ThreadsafeFunction`
+
+The runtime is auto-detected — import `os-theme` and it picks the right backend.
 
 ### macOS architecture
 
@@ -286,7 +293,7 @@ bun test test/integration.test.ts # just the live toggle test
 ## Roadmap
 
 - [x] Event-driven macOS listener via `NSDistributedNotificationCenter` (helper subprocess)
-- [ ] Node.js compatibility (N-API fallback for non-Bun consumers)
+- [x] Node.js compatibility via N-API (`napi-rs` addon, works with tsx/ts-node)
 - [ ] Prebuilt binaries via npm optional dependencies (no Rust needed to install)
 - [ ] CI/CD with GitHub Actions matrix builds (macOS, Windows, Linux)
 - [ ] `bun build --compile` for single-executable distribution

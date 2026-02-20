@@ -39,6 +39,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Rust build artifacts
 native/target/
+napi/target/
 
 # Prebuilt native binaries (downloaded or compiled)
 *.dylib

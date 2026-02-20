@@ -1,87 +1,38 @@
-import { dlopen, FFIType, suffix, JSCallback } from "bun:ffi";
-import { join } from "path";
+// Runtime detection: use bun:ffi when running in Bun, N-API addon otherwise
 import type { ThemeMode } from "./types";
 
-const NATIVE_LIB_NAME = `libos_theme.${suffix}`;
+const isBun = typeof globalThis.Bun !== "undefined";
 
-function findNativeLib(): string {
-    // Look in native/target/release/ first (development)
-    const devPath = join(import.meta.dir, "..", "native", "target", "release", NATIVE_LIB_NAME);
-    if (Bun.file(devPath).size) {
-        return devPath;
+let _backend: typeof import("./ffi-bun") | typeof import("./ffi-napi") | null = null;
+
+async function getBackend() {
+    if (!_backend) {
+        _backend = isBun
+            ? await import("./ffi-bun")
+            : await import("./ffi-napi");
     }
-
-    // Look next to the source (production/installed)
-    const prodPath = join(import.meta.dir, "..", "bin", NATIVE_LIB_NAME);
-    if (Bun.file(prodPath).size) {
-        return prodPath;
-    }
-
-    throw new Error(
-        `os-theme: native library not found (${NATIVE_LIB_NAME}). ` +
-            `Run 'bun run build:native' to compile it.`
-    );
+    return _backend;
 }
 
-let lib: ReturnType<typeof dlopen> | null = null;
+// Eagerly load the backend at module init
+const backendReady = getBackend();
 
-function getLib() {
-    if (!lib) {
-        const libPath = findNativeLib();
-        lib = dlopen(libPath, {
-            get_appearance: {
-                args: [],
-                returns: FFIType.i32,
-            },
-            start_listener: {
-                args: [FFIType.ptr],
-                returns: FFIType.void,
-            },
-            stop_listener: {
-                args: [],
-                returns: FFIType.void,
-            },
-        });
-    }
-    return lib;
+export async function nativeGetAppearance(): Promise<ThemeMode> {
+    const b = await backendReady;
+    return b.nativeGetAppearance();
 }
 
-export function nativeGetAppearance(): ThemeMode {
-    const result = getLib().symbols.get_appearance();
-    return result === 1 ? "dark" : "light";
+export async function nativeStartListener(callback: (mode: number) => void): Promise<void> {
+    const b = await backendReady;
+    b.nativeStartListener(callback);
 }
 
-let activeCallback: JSCallback | null = null;
-
-export function nativeStartListener(callback: (mode: number) => void): void {
-    // Clean up any existing callback
-    if (activeCallback) {
-        activeCallback.close();
-    }
-
-    activeCallback = new JSCallback(
-        (mode: number) => callback(mode),
-        {
-            args: [FFIType.i32],
-            returns: FFIType.void,
-            threadsafe: true, // Rust calls from a different thread
-        }
-    );
-
-    getLib().symbols.start_listener(activeCallback.ptr);
+export async function nativeStopListener(): Promise<void> {
+    const b = await backendReady;
+    b.nativeStopListener();
 }
 
-export function nativeStopListener(): void {
-    getLib().symbols.stop_listener();
-    if (activeCallback) {
-        activeCallback.close();
-        activeCallback = null;
-    }
-}
-
-export function closeLib(): void {
-    if (lib) {
-        lib.close();
-        lib = null;
-    }
+export async function closeLib(): Promise<void> {
+    const b = await backendReady;
+    b.closeLib();
 }

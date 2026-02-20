@@ -6,14 +6,14 @@ export interface AppearanceEvents {
 
 export interface Appearance {
     /** Get the current OS theme mode */
-    current(): ThemeMode;
+    current(): Promise<ThemeMode>;
 
     /** Listen for theme changes */
-    on(event: "change", listener: (mode: ThemeMode) => void): void;
+    on(event: "change", listener: (mode: ThemeMode) => void): Promise<void>;
 
     /** Remove a specific listener */
-    off(event: "change", listener: (mode: ThemeMode) => void): void;
+    off(event: "change", listener: (mode: ThemeMode) => void): Promise<void>;
 
     /** Stop listening for changes and clean up native resources */
-    dispose(): void;
+    dispose(): Promise<void>;
 }

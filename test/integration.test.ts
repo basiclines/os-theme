@@ -4,23 +4,23 @@ import { appearance } from "../src/index";
 describe("appearance listener (macOS integration)", () => {
     test("fires callback when OS theme changes", async () => {
         // Get initial state
-        const initial = appearance.current();
+        const initial = await appearance.current();
         const targetMode = initial === "dark" ? "light" : "dark";
 
         // Set up listener and wait for callback
-        const result = await new Promise<string>((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                appearance.off("change", listener);
+        const result = await new Promise<string>(async (resolve, reject) => {
+            const timeout = setTimeout(async () => {
+                await appearance.off("change", listener);
                 reject(new Error("Listener did not fire within 5 seconds"));
             }, 5_000);
 
-            const listener = (mode: string) => {
+            const listener = async (mode: string) => {
                 clearTimeout(timeout);
-                appearance.off("change", listener);
+                await appearance.off("change", listener);
                 resolve(mode);
             };
 
-            appearance.on("change", listener);
+            await appearance.on("change", listener);
 
             // Give the native listener thread time to start and attach to the run loop
             setTimeout(async () => {
@@ -48,8 +48,8 @@ describe("appearance listener (macOS integration)", () => {
         ]).exited;
 
         // Verify it's back
-        // Small delay for the notification to propagate
         await Bun.sleep(500);
-        expect(appearance.current()).toBe(initial);
-    }, 10_000); // 10s timeout for the whole test
+        const restored = await appearance.current();
+        expect(restored).toBe(initial);
+    }, 10_000);
 });

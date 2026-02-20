@@ -12,18 +12,18 @@ class AppearanceImpl implements Appearance {
     private listeners: Set<(mode: ThemeMode) => void> = new Set();
     private listening = false;
 
-    current(): ThemeMode {
+    async current(): Promise<ThemeMode> {
         return nativeGetAppearance();
     }
 
-    on(event: "change", listener: (mode: ThemeMode) => void): void {
+    async on(event: "change", listener: (mode: ThemeMode) => void): Promise<void> {
         if (event !== "change") return;
 
         this.listeners.add(listener);
 
         if (!this.listening) {
             this.listening = true;
-            nativeStartListener((modeInt: number) => {
+            await nativeStartListener((modeInt: number) => {
                 const mode: ThemeMode = modeInt === 1 ? "dark" : "light";
                 for (const fn of this.listeners) {
                     try {
@@ -36,23 +36,23 @@ class AppearanceImpl implements Appearance {
         }
     }
 
-    off(event: "change", listener: (mode: ThemeMode) => void): void {
+    async off(event: "change", listener: (mode: ThemeMode) => void): Promise<void> {
         if (event !== "change") return;
         this.listeners.delete(listener);
 
         if (this.listeners.size === 0 && this.listening) {
             this.listening = false;
-            nativeStopListener();
+            await nativeStopListener();
         }
     }
 
-    dispose(): void {
+    async dispose(): Promise<void> {
         if (this.listening) {
             this.listening = false;
-            nativeStopListener();
+            await nativeStopListener();
         }
         this.listeners.clear();
-        closeLib();
+        await closeLib();
     }
 }
 
