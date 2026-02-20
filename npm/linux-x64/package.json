@@ -2,8 +2,12 @@
   "name": "@os-theme/linux-x64",
   "version": "0.0.1",
   "description": "os-theme prebuilt binary for Linux x64",
-  "os": ["linux"],
-  "cpu": ["x64"],
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
   "main": "os-theme-napi.linux-x64.node",
   "files": [
     "os-theme-napi.linux-x64.node"
