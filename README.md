@@ -1,5 +1,10 @@
 # os-theme
 
+[![npm version](https://img.shields.io/npm/v/os-theme)](https://www.npmjs.com/package/os-theme)
+[![CI](https://github.com/basiclines/os-theme/actions/workflows/ci.yml/badge.svg)](https://github.com/basiclines/os-theme/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![npm downloads](https://img.shields.io/npm/dm/os-theme)](https://www.npmjs.com/package/os-theme)
+
 Cross-platform OS theme detection (dark/light mode) with change notifications for Node.js and Bun.
 
 ## Features
