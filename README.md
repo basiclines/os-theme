@@ -15,8 +15,12 @@ Cross-platform OS theme detection (dark/light mode) with change notifications fo
 ## Install
 
 ```bash
+npm install os-theme
+# or
 bun add os-theme
 ```
+
+Prebuilt binaries are provided for macOS (ARM64), Linux (x64), and Windows (x64). No Rust toolchain required.
 
 ## Quick Start
 
@@ -294,7 +298,7 @@ bun test test/integration.test.ts # just the live toggle test
 
 - [x] Event-driven macOS listener via `NSDistributedNotificationCenter` (helper subprocess)
 - [x] Node.js compatibility via N-API (`napi-rs` addon, works with tsx/ts-node)
-- [ ] Prebuilt binaries via npm optional dependencies (no Rust needed to install)
+- [x] Prebuilt binaries via npm optional dependencies (no Rust needed to install)
 - [x] CI/CD with GitHub Actions matrix builds (macOS, Windows, Linux)
 - [ ] `bun build --compile` for single-executable distribution
 

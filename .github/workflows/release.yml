@@ -1,0 +1,155 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            arch: arm64
+            platform: darwin
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            arch: x64
+            platform: linux
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            arch: x64
+            platform: win32
+
+    runs-on: ${{ matrix.os }}
+    name: Build (${{ matrix.platform }}-${{ matrix.arch }})
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
+
+      # Build N-API addon
+      - name: Build N-API addon
+        working-directory: napi
+        run: cargo build --release --target ${{ matrix.target }}
+
+      # Build Bun FFI library
+      - name: Build native library
+        working-directory: native
+        run: cargo build --release --target ${{ matrix.target }}
+
+      # Prepare platform package
+      - name: Prepare platform package (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          LIB_EXT=$([[ "${{ matrix.platform }}" == "darwin" ]] && echo "dylib" || echo "so")
+          NPM_DIR="npm/${{ matrix.platform }}-${{ matrix.arch }}"
+
+          # Copy N-API addon
+          cp napi/target/${{ matrix.target }}/release/libos_theme_napi.$LIB_EXT \
+             $NPM_DIR/os-theme-napi.${{ matrix.platform }}-${{ matrix.arch }}.node
+
+          # Copy helper binary (macOS only)
+          if [[ "${{ matrix.platform }}" == "darwin" ]]; then
+            cp native/target/${{ matrix.target }}/release/os-theme-helper $NPM_DIR/ || true
+          fi
+
+          ls -la $NPM_DIR/
+
+      - name: Prepare platform package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $npmDir = "npm/${{ matrix.platform }}-${{ matrix.arch }}"
+          Copy-Item napi/target/${{ matrix.target }}/release/os_theme_napi.dll `
+            "$npmDir/os-theme-napi.${{ matrix.platform }}-${{ matrix.arch }}.node"
+          Get-ChildItem $npmDir
+
+      - name: Upload platform package
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-${{ matrix.platform }}-${{ matrix.arch }}
+          path: npm/${{ matrix.platform }}-${{ matrix.arch }}/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Publish to npm
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      # Download all platform artifacts
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-darwin-arm64
+          path: npm/darwin-arm64/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-linux-x64
+          path: npm/linux-x64/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-win32-x64
+          path: npm/win32-x64/
+
+      # Sync versions from tag
+      - name: Set version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          npm version $VERSION --no-git-tag-version
+          node scripts/version-sync.js
+
+      # Publish platform packages first
+      - name: Publish @os-theme/darwin-arm64
+        working-directory: npm/darwin-arm64
+        run: npm publish --access public || true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @os-theme/linux-x64
+        working-directory: npm/linux-x64
+        run: npm publish --access public || true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @os-theme/win32-x64
+        working-directory: npm/win32-x64
+        run: npm publish --access public || true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Publish main package
+      - name: Publish os-theme
+        run: npm publish --access public || true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Create GitHub Release
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true

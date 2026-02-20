@@ -1,0 +1,17 @@
+{
+  "name": "@os-theme/darwin-arm64",
+  "version": "0.0.1",
+  "description": "os-theme prebuilt binary for macOS ARM64",
+  "os": ["darwin"],
+  "cpu": ["arm64"],
+  "main": "os-theme-napi.darwin-arm64.node",
+  "files": [
+    "os-theme-napi.darwin-arm64.node",
+    "os-theme-helper"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/basiclines/os-theme"
+  }
+}

@@ -15,18 +15,24 @@ function getAddonPath(): string {
         : process.platform === "win32" ? "win32"
         : "linux";
     const filename = `${ADDON_NAME}.${platform}-${arch}.node`;
+    const platformPkg = `@os-theme/${platform}-${arch}`;
 
-    // Development: napi/target/release/
+    // 1. Installed npm optional dependency (production)
+    try {
+        return _require.resolve(`${platformPkg}/${filename}`);
+    } catch {}
+
+    // 2. Development: napi/target/release/
     const devPath = join(__dirname, "..", "native", "target", "release", filename);
     if (existsSync(devPath)) return devPath;
 
-    // Production: bin/
+    // 3. Fallback: bin/
     const prodPath = join(__dirname, "..", "bin", filename);
     if (existsSync(prodPath)) return prodPath;
 
     throw new Error(
         `os-theme: N-API addon not found (${filename}). ` +
-            `Run the napi build to compile it.`
+            `Install the platform package: npm install ${platformPkg}`
     );
 }
 
