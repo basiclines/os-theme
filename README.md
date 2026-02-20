@@ -14,6 +14,7 @@ Cross-platform OS theme detection (dark/light mode) with change notifications fo
 - Cross-platform — macOS, Windows, Linux
 - Bun and Node support
 - Zero JS dependencies
+- Terminal-level theme detection via [Mode 2031](https://contour-terminal.org/vt-extensions/color-palette-update-notifications/) and OSC 11 (no native code needed)
 
 ## Install
 
@@ -132,6 +133,54 @@ process.on("SIGINT", async () => {
   process.exit(0);
 });
 ```
+
+## Terminal Theme Detection
+
+For terminal applications, os-theme can detect the **terminal's** theme directly — independent of the OS setting. This is useful when a user runs a dark terminal on a light OS, or vice versa.
+
+Two mechanisms are available, both pure JS (no native code):
+
+### `terminal.current(): Promise<ThemeMode | null>`
+
+Query the terminal's background color via [OSC 11](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Operating-System-Commands) and classify it as dark or light based on luminance. Returns `null` if not running in a TTY or the terminal doesn't respond.
+
+```typescript
+import { terminal } from "os-theme";
+
+const theme = await terminal.current(); // "dark", "light", or null
+```
+
+This is a one-shot query — no polling.
+
+### `terminal.on("change", listener): void`
+
+Listen for terminal theme changes via [Mode 2031](https://contour-terminal.org/vt-extensions/color-palette-update-notifications/). The terminal pushes a notification when its color scheme changes — no polling needed.
+
+```typescript
+import { terminal } from "os-theme";
+
+terminal.on("change", (mode) => {
+  console.log(`Terminal theme changed: ${mode}`);
+});
+
+// Clean up when done
+terminal.dispose();
+```
+
+### Terminal support
+
+| Terminal | `current()` (OSC 11) | `on("change")` (Mode 2031) |
+|----------|:--------------------:|:--------------------------:|
+| Ghostty | Yes | Yes |
+| Kitty | Yes | Yes |
+| Contour | Yes | Yes |
+| VTE/GNOME Terminal (>=0.82) | Yes | Yes |
+| iTerm2 | Yes | No |
+| Windows Terminal | Yes | No |
+| Terminal.app | Yes | No |
+| tmux | Cached | No |
+
+When Mode 2031 is not supported, `terminal.on("change")` won't fire — fall back to `appearance.on("change")` for OS-level change detection.
 
 ## Platform Details
 
@@ -279,6 +328,7 @@ bun run build:native   # compile Rust → .dylib/.so/.dll
 bun run build:native   # compile native library
 bun test               # run all tests (unit + integration)
 bun run dev            # interactive demo — toggle your OS theme to see events
+bun run dev:terminal   # terminal theme demo — toggle your terminal theme
 bun run benchmark      # measure resource usage and event latency
 ```
 
@@ -303,6 +353,7 @@ bun test test/integration.test.ts # just the live toggle test
 - [x] Node.js compatibility via N-API (`napi-rs` addon, works with tsx/ts-node)
 - [x] Prebuilt binaries via npm optional dependencies (no Rust needed to install)
 - [x] CI/CD with GitHub Actions matrix builds (macOS, Windows, Linux)
+- [x] Terminal-level theme detection via Mode 2031 and OSC 11
 - [ ] `bun build --compile` for single-executable distribution
 
 ## License

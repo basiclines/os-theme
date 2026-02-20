@@ -7,6 +7,8 @@ import {
 } from "./ffi";
 
 export type { ThemeMode, Appearance } from "./types";
+export type { Terminal } from "./terminal";
+export { terminal } from "./terminal";
 
 class AppearanceImpl implements Appearance {
     private listeners: Set<(mode: ThemeMode) => void> = new Set();

@@ -15,6 +15,7 @@
     "build:native": "./scripts/build-native.sh",
     "test": "bun test",
     "dev": "bun run src/demo.ts",
+    "dev:terminal": "bun run src/demo-terminal.ts",
     "benchmark": "./scripts/benchmark.sh",
     "version:sync": "node scripts/version-sync.js"
   },
