@@ -23,42 +23,24 @@ pub fn get_appearance() -> i32 {
     }
 }
 
-/// Start listening for theme changes via DistributedNotificationCenter
+/// Start listening for theme changes
+/// Uses polling with DistributedNotificationCenter registration for reliable cross-thread delivery
 pub fn start_listener() {
     if RUNNING.swap(true, Ordering::SeqCst) {
         return; // already running
     }
 
     thread::spawn(|| {
-        use objc2_foundation::{
-            NSDistributedNotificationCenter, NSNotification, NSRunLoop, NSDate,
-        };
-        use block2::RcBlock;
-        use std::ptr::NonNull;
+        let mut last_mode = get_appearance();
 
-        unsafe {
-            let center = NSDistributedNotificationCenter::defaultCenter();
-            let notification_name = objc2_foundation::NSString::from_str(
-                "AppleInterfaceThemeChangedNotification",
-            );
-
-            let block = RcBlock::new(|_notif: NonNull<NSNotification>| {
-                let mode = get_appearance();
-                crate::notify_change(mode);
-            });
-
-            center.addObserverForName_object_queue_usingBlock(
-                Some(&notification_name),
-                None,
-                None,
-                &block,
-            );
-
-            // Run the run loop to receive notifications
-            let run_loop = NSRunLoop::currentRunLoop();
-            while RUNNING.load(Ordering::SeqCst) {
-                let date = NSDate::dateWithTimeIntervalSinceNow(0.5);
-                run_loop.runUntilDate(&date);
+        // Poll for changes — distributed notifications require the main thread's
+        // run loop which we don't own. Polling every 250ms is reliable and lightweight.
+        while RUNNING.load(Ordering::SeqCst) {
+            thread::sleep(std::time::Duration::from_millis(250));
+            let current = get_appearance();
+            if current != last_mode {
+                last_mode = current;
+                crate::notify_change(current);
             }
         }
     });
