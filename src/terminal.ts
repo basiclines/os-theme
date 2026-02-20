@@ -49,6 +49,8 @@ class TerminalImpl implements Terminal {
     private listeners: Set<(mode: ThemeMode) => void> = new Set();
     private stdinHandler: ((data: Buffer) => void) | null = null;
     private wasRaw = false;
+    private mode2031Supported: boolean | null = null;
+    private probeTimeout: ReturnType<typeof setTimeout> | null = null;
 
     async current(): Promise<ThemeMode | null> {
         if (!process.stdin.isTTY || !process.stdout.isTTY) return null;
@@ -95,13 +97,38 @@ class TerminalImpl implements Terminal {
             this.wasRaw = process.stdin.isRaw;
             process.stdin.setRawMode(true);
             process.stdin.resume();
-            // Prevent stdin from keeping the process alive
             process.stdin.unref();
 
             this.stdinHandler = (data: Buffer) => {
                 const str = data.toString();
+
+                // Check for Mode 2031 probe response (DECRPM: CSI ? 2031 ; Ps $ y)
+                // Ps=1 means set (supported), Ps=2 means reset, anything else = unsupported
+                if (this.mode2031Supported === null) {
+                    const decrpm = str.match(/\x1b\[\?2031;(\d)\$y/);
+                    if (decrpm) {
+                        this.mode2031Supported = decrpm[1] === "1" || decrpm[1] === "2";
+                        if (this.probeTimeout) {
+                            clearTimeout(this.probeTimeout);
+                            this.probeTimeout = null;
+                        }
+                        if (!this.mode2031Supported) {
+                            this.emitFallbackWarning();
+                        }
+                        return;
+                    }
+                }
+
                 const match = str.match(MODE_2031_REGEX);
                 if (match) {
+                    // If we were still probing, the terminal clearly supports it
+                    if (this.mode2031Supported === null) {
+                        this.mode2031Supported = true;
+                        if (this.probeTimeout) {
+                            clearTimeout(this.probeTimeout);
+                            this.probeTimeout = null;
+                        }
+                    }
                     const mode: ThemeMode = match[1] === "1" ? "dark" : "light";
                     for (const fn of this.listeners) {
                         try {
@@ -115,6 +142,18 @@ class TerminalImpl implements Terminal {
 
             process.stdin.on("data", this.stdinHandler);
             process.stdout.write(MODE_2031_ENABLE);
+
+            // Query Mode 2031 support via DECRQM (Device Control Request Mode)
+            process.stdout.write(`${ESC}[?2031$p`);
+
+            // If no DECRPM response within 200ms, terminal doesn't support Mode 2031
+            this.probeTimeout = setTimeout(() => {
+                this.probeTimeout = null;
+                if (this.mode2031Supported === null) {
+                    this.mode2031Supported = false;
+                    this.emitFallbackWarning();
+                }
+            }, 200);
         }
     }
 
@@ -128,6 +167,10 @@ class TerminalImpl implements Terminal {
     }
 
     dispose(): void {
+        if (this.probeTimeout) {
+            clearTimeout(this.probeTimeout);
+            this.probeTimeout = null;
+        }
         if (this.stdinHandler) {
             process.stdout.write(MODE_2031_DISABLE);
             process.stdin.off("data", this.stdinHandler);
@@ -136,6 +179,15 @@ class TerminalImpl implements Terminal {
             this.stdinHandler = null;
         }
         this.listeners.clear();
+        this.mode2031Supported = null;
+    }
+
+    private emitFallbackWarning(): void {
+        console.warn(
+            "[os-theme] Terminal does not support Mode 2031 (theme change notifications).\n" +
+            "           terminal.on(\"change\") will not fire in this terminal.\n" +
+            "           Use appearance.on(\"change\") for OS-level theme detection instead."
+        );
     }
 }
 
