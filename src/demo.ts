@@ -8,9 +8,12 @@ appearance.on("change", (mode) => {
     console.log(`🔄 Theme changed to: ${mode}`);
 });
 
-// Keep the process alive
+// Keep the event loop alive while listening
+const keepAlive = setInterval(() => {}, 1_000_000);
+
 process.on("SIGINT", () => {
     console.log("\nCleaning up...");
+    clearInterval(keepAlive);
     appearance.dispose();
     process.exit(0);
 });
