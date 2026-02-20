@@ -172,12 +172,18 @@ terminal.dispose();
 | Terminal | `current()` (OSC 11) | `on("change")` (Mode 2031) |
 |----------|:--------------------:|:--------------------------:|
 | Ghostty | Yes | Yes |
-| Kitty | Yes | Yes |
-| Contour | Yes | Yes |
-| VTE/GNOME Terminal (>=0.82) | Yes | Yes |
+| Kitty (>=0.38.1) | Yes | Yes |
+| Contour (>=0.4.0) | Yes | Yes |
+| VTE (>=0.82) | Yes | Yes |
+| GNOME Terminal | Yes | Via VTE |
 | iTerm2 | Yes | No |
-| Windows Terminal | Yes | No |
 | Terminal.app | Yes | No |
+| Windows Terminal (>=1.22) | Yes | No |
+| Alacritty | Yes | No |
+| WezTerm | Yes | No |
+| Konsole | Yes | No |
+| foot | Yes | No |
+| xterm | Yes | No |
 | tmux | Cached | No |
 
 When Mode 2031 is not supported, `terminal.on("change")` won't fire — fall back to `appearance.on("change")` for OS-level change detection.
