@@ -1,6 +1,6 @@
 {
   "name": "@os-theme/linux-x64",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "os-theme prebuilt binary for Linux x64",
   "os": [
     "linux"

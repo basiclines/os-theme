@@ -48,7 +48,6 @@ pub fn start_listener() {
     let helper = match helper_path() {
         Some(p) => p,
         None => {
-            eprintln!("os-theme: helper binary not found, falling back to polling");
             // Fall back to polling
             thread::spawn(|| {
                 let mut last = get_appearance();
@@ -73,7 +72,6 @@ pub fn start_listener() {
     {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("os-theme: failed to spawn helper: {}", e);
             return;
         }
     };
