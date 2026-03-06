@@ -70,7 +70,7 @@ class TerminalImpl implements Terminal {
                 const match = str.match(OSC_11_REGEX);
                 if (match) {
                     cleanup();
-                    const lum = rgbLuminance(match[1], match[2], match[3]);
+                    const lum = rgbLuminance(match[1]!, match[2]!, match[3]!);
                     resolve(lum < 0.5 ? "dark" : "light");
                 }
             };

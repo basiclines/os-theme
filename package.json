@@ -1,18 +1,28 @@
 {
   "name": "os-theme",
-  "version": "0.0.1",
+  "version": "0.0.5",
   "description": "Cross-platform OS theme detection (dark/light mode) with event-driven change notifications for Node.js and Bun",
-  "module": "src/index.ts",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/basiclines/os-theme"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "build:native": "./scripts/build-native.sh",
+    "prepublishOnly": "bun run build",
     "test": "bun test",
     "dev": "bun run src/demo.ts",
     "dev:terminal": "bun run src/demo-terminal.ts",
@@ -20,6 +30,7 @@
     "version:sync": "node scripts/version-sync.js"
   },
   "files": [
+    "dist",
     "src",
     "README.md",
     "LICENSE"
@@ -39,9 +50,9 @@
     "native"
   ],
   "optionalDependencies": {
-    "@os-theme/darwin-arm64": "0.0.1",
-    "@os-theme/linux-x64": "0.0.1",
-    "@os-theme/win32-x64": "0.0.1"
+    "@os-theme/darwin-arm64": "0.0.5",
+    "@os-theme/linux-x64": "0.0.5",
+    "@os-theme/win32-x64": "0.0.5"
   },
   "devDependencies": {
     "@types/bun": "latest"

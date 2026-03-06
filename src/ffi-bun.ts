@@ -1,4 +1,4 @@
-import { dlopen, FFIType, suffix, JSCallback } from "bun:ffi";
+import { dlopen, FFIType, suffix, JSCallback, type Pointer } from "bun:ffi";
 import { join } from "path";
 import type { ThemeMode } from "./types";
 
@@ -24,9 +24,20 @@ function findNativeLib(): string {
     );
 }
 
-let lib: ReturnType<typeof dlopen> | null = null;
+interface NativeSymbols {
+    get_appearance: () => number;
+    start_listener: (ptr: Pointer) => void;
+    stop_listener: () => void;
+}
 
-function getLib() {
+interface NativeLib {
+    symbols: NativeSymbols;
+    close(): void;
+}
+
+let lib: NativeLib | null = null;
+
+function getLib(): NativeLib {
     if (!lib) {
         const libPath = findNativeLib();
         lib = dlopen(libPath, {
@@ -42,7 +53,7 @@ function getLib() {
                 args: [],
                 returns: FFIType.void,
             },
-        });
+        }) as NativeLib;
     }
     return lib;
 }
@@ -69,7 +80,7 @@ export function nativeStartListener(callback: (mode: number) => void): void {
         }
     );
 
-    getLib().symbols.start_listener(activeCallback.ptr);
+    getLib().symbols.start_listener(activeCallback.ptr!);
 }
 
 export function nativeStopListener(): void {

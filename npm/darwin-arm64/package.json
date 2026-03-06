@@ -1,6 +1,6 @@
 {
   "name": "@os-theme/darwin-arm64",
-  "version": "0.0.1",
+  "version": "0.0.5",
   "description": "os-theme prebuilt binary for macOS ARM64",
   "os": [
     "darwin"
