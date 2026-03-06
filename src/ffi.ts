@@ -1,15 +1,15 @@
 // Runtime detection: use bun:ffi when running in Bun, N-API addon otherwise
-import type { ThemeMode } from "./types";
+import type { ThemeMode } from "./types.js";
 
 const isBun = typeof globalThis.Bun !== "undefined";
 
-let _backend: typeof import("./ffi-bun") | typeof import("./ffi-napi") | null = null;
+let _backend: typeof import("./ffi-bun.js") | typeof import("./ffi-napi.js") | null = null;
 
 async function getBackend() {
     if (!_backend) {
         _backend = isBun
-            ? await import("./ffi-bun")
-            : await import("./ffi-napi");
+            ? await import("./ffi-bun.js")
+            : await import("./ffi-napi.js");
     }
     return _backend;
 }

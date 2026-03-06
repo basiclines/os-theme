@@ -2,7 +2,7 @@ import { join, dirname } from "path";
 import { existsSync } from "fs";
 import { createRequire } from "module";
 import { fileURLToPath } from "url";
-import type { ThemeMode } from "./types";
+import type { ThemeMode } from "./types.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const _require = createRequire(import.meta.url);

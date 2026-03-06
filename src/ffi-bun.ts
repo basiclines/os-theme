@@ -1,6 +1,6 @@
 import { dlopen, FFIType, suffix, JSCallback, type Pointer } from "bun:ffi";
 import { join } from "path";
-import type { ThemeMode } from "./types";
+import type { ThemeMode } from "./types.js";
 
 const IS_WINDOWS = process.platform === "win32";
 const NATIVE_LIB_NAME = IS_WINDOWS ? `os_theme.${suffix}` : `libos_theme.${suffix}`;

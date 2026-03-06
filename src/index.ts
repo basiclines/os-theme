@@ -1,14 +1,14 @@
-import type { Appearance, ThemeMode } from "./types";
+import type { Appearance, ThemeMode } from "./types.js";
 import {
     nativeGetAppearance,
     nativeStartListener,
     nativeStopListener,
     closeLib,
-} from "./ffi";
+} from "./ffi.js";
 
-export type { ThemeMode, Appearance } from "./types";
-export type { Terminal } from "./terminal";
-export { terminal } from "./terminal";
+export type { ThemeMode, Appearance } from "./types.js";
+export type { Terminal } from "./terminal.js";
+export { terminal } from "./terminal.js";
 
 class AppearanceImpl implements Appearance {
     private listeners: Set<(mode: ThemeMode) => void> = new Set();

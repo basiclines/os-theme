@@ -1,4 +1,4 @@
-import type { ThemeMode } from "./types";
+import type { ThemeMode } from "./types.js";
 
 export interface Terminal {
     /** Get the current terminal theme by querying background color via OSC 11 */
