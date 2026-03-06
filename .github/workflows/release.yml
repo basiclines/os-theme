@@ -100,11 +100,17 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           registry-url: "https://registry.npmjs.org"
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Update npm for OIDC support
         run: npm install -g npm@latest
+
+      - name: Install dependencies
+        run: bun install --ignore-scripts
 
       # Download all platform artifacts
       - uses: actions/download-artifact@v4
@@ -130,6 +136,10 @@ jobs:
           npm version $VERSION --no-git-tag-version
           node scripts/version-sync.js
 
+      # Build TypeScript → dist/
+      - name: Build dist
+        run: bun run build
+
       # Publish platform packages first
       - name: Publish @os-theme/darwin-arm64
         working-directory: npm/darwin-arm64
@@ -146,9 +156,3 @@ jobs:
       # Publish main package
       - name: Publish os-theme
         run: npm publish --access public --provenance || true
-
-      # Create GitHub Release
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true

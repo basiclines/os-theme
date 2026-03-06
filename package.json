@@ -14,6 +14,10 @@
       "default": "./dist/index.js"
     }
   },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -26,6 +30,7 @@
     "test": "bun test",
     "dev": "bun run src/demo.ts",
     "dev:terminal": "bun run src/demo-terminal.ts",
+    "release": "bun run scripts/release.ts",
     "benchmark": "./scripts/benchmark.sh",
     "version:sync": "node scripts/version-sync.js"
   },
