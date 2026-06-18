@@ -60,9 +60,7 @@
     "@os-theme/win32-x64": "0.0.8"
   },
   "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
+    "@types/bun": "latest",
     "typescript": "^5"
   }
 }
