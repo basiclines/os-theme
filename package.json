@@ -1,6 +1,6 @@
 {
   "name": "os-theme",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Cross-platform OS theme detection (dark/light mode) with event-driven change notifications for Node.js and Bun",
   "module": "dist/index.js",
   "main": "dist/index.js",
@@ -55,9 +55,9 @@
     "native"
   ],
   "optionalDependencies": {
-    "@os-theme/darwin-arm64": "0.0.8",
-    "@os-theme/linux-x64": "0.0.8",
-    "@os-theme/win32-x64": "0.0.8"
+    "@os-theme/darwin-arm64": "0.0.9",
+    "@os-theme/linux-x64": "0.0.9",
+    "@os-theme/win32-x64": "0.0.9"
   },
   "devDependencies": {
     "@types/bun": "latest",
